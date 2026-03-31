@@ -1,7 +1,7 @@
-import Database from 'better-sqlite3';
+import { Client } from '@libsql/client';
 
-export function initializeDatabase(db: Database.Database) {
-  db.exec(`
+export async function initializeDatabase(db: Client) {
+  await db.executeMultiple(`
     CREATE TABLE IF NOT EXISTS categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
@@ -56,11 +56,10 @@ export function initializeDatabase(db: Database.Database) {
     { name: 'Anders', slug: 'anders' },
   ];
 
-  const insert = db.prepare(
-    'INSERT OR IGNORE INTO categories (name, slug) VALUES (?, ?)'
-  );
-
   for (const cat of defaultCategories) {
-    insert.run(cat.name, cat.slug);
+    await db.execute({
+      sql: 'INSERT OR IGNORE INTO categories (name, slug) VALUES (?, ?)',
+      args: [cat.name, cat.slug],
+    });
   }
 }

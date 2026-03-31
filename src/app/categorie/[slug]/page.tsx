@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import PromptCard from '@/components/PromptCard';
 import db from '@/lib/db';
+import { ensureDbInitialized } from '@/lib/init';
 import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
@@ -9,31 +10,44 @@ interface CategoryPageProps {
   params: { slug: string };
 }
 
-export default function CategoryPage({ params }: CategoryPageProps) {
-  const category = db.prepare('SELECT * FROM categories WHERE slug = ?').get(params.slug) as any;
+export default async function CategoryPage({ params }: CategoryPageProps) {
+  await ensureDbInitialized();
 
-  if (!category) {
+  const catResult = await db.execute({
+    sql: 'SELECT * FROM categories WHERE slug = ?',
+    args: [params.slug],
+  });
+
+  if (catResult.rows.length === 0) {
     notFound();
   }
 
-  const prompts = db.prepare(`
-    SELECT DISTINCT p.*,
-      (SELECT AVG(CAST(score AS FLOAT)) FROM ratings WHERE prompt_id = p.id) as average_rating,
-      (SELECT COUNT(*) FROM ratings WHERE prompt_id = p.id) as rating_count
-    FROM prompts p
-    JOIN prompt_categories pc ON p.id = pc.prompt_id
-    WHERE pc.category_id = ?
-    ORDER BY p.updated_at DESC
-  `).all(category.id) as any[];
+  const category = catResult.rows[0];
 
-  const results = prompts.map((p) => {
-    const categories = db.prepare(`
-      SELECT c.* FROM categories c
-      JOIN prompt_categories pc ON c.id = pc.category_id
-      WHERE pc.prompt_id = ?
-    `).all(p.id) as any[];
-    return { ...p, categories };
+  const prompts = await db.execute({
+    sql: `
+      SELECT DISTINCT p.*,
+        (SELECT AVG(CAST(score AS FLOAT)) FROM ratings WHERE prompt_id = p.id) as average_rating,
+        (SELECT COUNT(*) FROM ratings WHERE prompt_id = p.id) as rating_count
+      FROM prompts p
+      JOIN prompt_categories pc ON p.id = pc.prompt_id
+      WHERE pc.category_id = ?
+      ORDER BY p.updated_at DESC
+    `,
+    args: [category.id],
   });
+
+  const results = await Promise.all(
+    prompts.rows.map(async (p) => {
+      const cats = await db.execute({
+        sql: `SELECT c.* FROM categories c
+              JOIN prompt_categories pc ON c.id = pc.category_id
+              WHERE pc.prompt_id = ?`,
+        args: [p.id],
+      });
+      return { ...p, categories: cats.rows };
+    })
+  );
 
   return (
     <div className="space-y-6">
@@ -41,7 +55,7 @@ export default function CategoryPage({ params }: CategoryPageProps) {
         <Link href="/" className="text-indigo-600 hover:text-indigo-800 transition-colors">
           &larr; Terug
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900">{category.name}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{category.name as string}</h1>
         <span className="text-gray-500">({results.length} prompts)</span>
       </div>
 

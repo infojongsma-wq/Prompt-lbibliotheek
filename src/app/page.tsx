@@ -2,6 +2,7 @@ import SearchBar from '@/components/SearchBar';
 import CategoryTile from '@/components/CategoryTile';
 import PromptCard from '@/components/PromptCard';
 import db from '@/lib/db';
+import { ensureDbInitialized } from '@/lib/init';
 
 interface HomeProps {
   searchParams: { q?: string };
@@ -9,34 +10,41 @@ interface HomeProps {
 
 export const dynamic = 'force-dynamic';
 
-export default function Home({ searchParams }: HomeProps) {
+export default async function Home({ searchParams }: HomeProps) {
+  await ensureDbInitialized();
   const query = searchParams.q;
 
   if (query) {
     const term = `%${query}%`;
-    const prompts = db.prepare(`
-      SELECT DISTINCT p.*,
-        (SELECT AVG(CAST(score AS FLOAT)) FROM ratings WHERE prompt_id = p.id) as average_rating,
-        (SELECT COUNT(*) FROM ratings WHERE prompt_id = p.id) as rating_count
-      FROM prompts p
-      LEFT JOIN prompt_categories pc ON p.id = pc.prompt_id
-      LEFT JOIN categories c ON pc.category_id = c.id
-      WHERE p.name LIKE ?
-        OR p.short_description LIKE ?
-        OR p.prompt_text LIKE ?
-        OR p.maker_notes LIKE ?
-        OR c.name LIKE ?
-      ORDER BY p.updated_at DESC
-    `).all(term, term, term, term, term) as any[];
-
-    const results = prompts.map((p) => {
-      const categories = db.prepare(`
-        SELECT c.* FROM categories c
-        JOIN prompt_categories pc ON c.id = pc.category_id
-        WHERE pc.prompt_id = ?
-      `).all(p.id) as any[];
-      return { ...p, categories };
+    const prompts = await db.execute({
+      sql: `
+        SELECT DISTINCT p.*,
+          (SELECT AVG(CAST(score AS FLOAT)) FROM ratings WHERE prompt_id = p.id) as average_rating,
+          (SELECT COUNT(*) FROM ratings WHERE prompt_id = p.id) as rating_count
+        FROM prompts p
+        LEFT JOIN prompt_categories pc ON p.id = pc.prompt_id
+        LEFT JOIN categories c ON pc.category_id = c.id
+        WHERE p.name LIKE ?
+          OR p.short_description LIKE ?
+          OR p.prompt_text LIKE ?
+          OR p.maker_notes LIKE ?
+          OR c.name LIKE ?
+        ORDER BY p.updated_at DESC
+      `,
+      args: [term, term, term, term, term],
     });
+
+    const results = await Promise.all(
+      prompts.rows.map(async (p) => {
+        const cats = await db.execute({
+          sql: `SELECT c.* FROM categories c
+                JOIN prompt_categories pc ON c.id = pc.category_id
+                WHERE pc.prompt_id = ?`,
+          args: [p.id],
+        });
+        return { ...p, categories: cats.rows };
+      })
+    );
 
     return (
       <div className="space-y-8">
@@ -59,13 +67,13 @@ export default function Home({ searchParams }: HomeProps) {
     );
   }
 
-  const categories = db.prepare(`
+  const categories = await db.execute(`
     SELECT c.*, COUNT(pc.prompt_id) as prompt_count
     FROM categories c
     LEFT JOIN prompt_categories pc ON c.id = pc.category_id
     GROUP BY c.id
     ORDER BY c.name
-  `).all() as any[];
+  `);
 
   return (
     <div className="space-y-8">
@@ -79,7 +87,7 @@ export default function Home({ searchParams }: HomeProps) {
       <div>
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Categorieën</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {categories.map((cat: any) => (
+          {categories.rows.map((cat: any) => (
             <CategoryTile key={cat.id} {...cat} />
           ))}
         </div>

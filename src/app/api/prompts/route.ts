@@ -1,46 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
+import { ensureDbInitialized } from '@/lib/init';
 import { CreatePromptInput } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
+  await ensureDbInitialized();
   const { searchParams } = new URL(request.url);
   const category = searchParams.get('category');
 
   let prompts;
   if (category) {
-    prompts = db.prepare(`
-      SELECT DISTINCT p.*,
-        (SELECT AVG(CAST(score AS FLOAT)) FROM ratings WHERE prompt_id = p.id) as average_rating,
-        (SELECT COUNT(*) FROM ratings WHERE prompt_id = p.id) as rating_count
-      FROM prompts p
-      JOIN prompt_categories pc ON p.id = pc.prompt_id
-      JOIN categories c ON pc.category_id = c.id
-      WHERE c.slug = ?
-      ORDER BY p.updated_at DESC
-    `).all(category);
+    prompts = await db.execute({
+      sql: `
+        SELECT DISTINCT p.*,
+          (SELECT AVG(CAST(score AS FLOAT)) FROM ratings WHERE prompt_id = p.id) as average_rating,
+          (SELECT COUNT(*) FROM ratings WHERE prompt_id = p.id) as rating_count
+        FROM prompts p
+        JOIN prompt_categories pc ON p.id = pc.prompt_id
+        JOIN categories c ON pc.category_id = c.id
+        WHERE c.slug = ?
+        ORDER BY p.updated_at DESC
+      `,
+      args: [category],
+    });
   } else {
-    prompts = db.prepare(`
+    prompts = await db.execute(`
       SELECT p.*,
         (SELECT AVG(CAST(score AS FLOAT)) FROM ratings WHERE prompt_id = p.id) as average_rating,
         (SELECT COUNT(*) FROM ratings WHERE prompt_id = p.id) as rating_count
       FROM prompts p
       ORDER BY p.updated_at DESC
-    `).all();
+    `);
   }
 
-  const promptsWithCategories = prompts.map((p: any) => {
-    const categories = db.prepare(`
-      SELECT c.* FROM categories c
-      JOIN prompt_categories pc ON c.id = pc.category_id
-      WHERE pc.prompt_id = ?
-    `).all(p.id);
-    return { ...p, categories };
-  });
+  const promptsWithCategories = await Promise.all(
+    prompts.rows.map(async (p) => {
+      const cats = await db.execute({
+        sql: `SELECT c.* FROM categories c
+              JOIN prompt_categories pc ON c.id = pc.category_id
+              WHERE pc.prompt_id = ?`,
+        args: [p.id],
+      });
+      return { ...p, categories: cats.rows };
+    })
+  );
 
   return NextResponse.json(promptsWithCategories);
 }
 
 export async function POST(request: NextRequest) {
+  await ensureDbInitialized();
   const body: CreatePromptInput = await request.json();
 
   if (!body.name || !body.prompt_text || !body.short_description) {
@@ -58,41 +69,40 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const insertPrompt = db.transaction((data: CreatePromptInput) => {
-    const result = db.prepare(`
-      INSERT INTO prompts (name, version, prompt_text, short_description, required_documents, maker_notes)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
-      data.name,
-      data.version || '1.0',
-      data.prompt_text,
-      data.short_description,
-      JSON.stringify(data.required_documents || []),
-      data.maker_notes || ''
-    );
-
-    const promptId = result.lastInsertRowid;
-
-    if (data.category_ids && data.category_ids.length > 0) {
-      const insertCat = db.prepare(
-        'INSERT INTO prompt_categories (prompt_id, category_id) VALUES (?, ?)'
-      );
-      for (const catId of data.category_ids) {
-        insertCat.run(promptId, catId);
-      }
-    }
-
-    return promptId;
+  const result = await db.execute({
+    sql: `INSERT INTO prompts (name, version, prompt_text, short_description, required_documents, maker_notes)
+          VALUES (?, ?, ?, ?, ?, ?)`,
+    args: [
+      body.name,
+      body.version || '1.0',
+      body.prompt_text,
+      body.short_description,
+      JSON.stringify(body.required_documents || []),
+      body.maker_notes || '',
+    ],
   });
 
-  const promptId = insertPrompt(body);
+  const promptId = result.lastInsertRowid!;
 
-  const prompt = db.prepare('SELECT * FROM prompts WHERE id = ?').get(promptId) as Record<string, unknown>;
-  const categories = db.prepare(`
-    SELECT c.* FROM categories c
-    JOIN prompt_categories pc ON c.id = pc.category_id
-    WHERE pc.prompt_id = ?
-  `).all(promptId);
+  if (body.category_ids && body.category_ids.length > 0) {
+    for (const catId of body.category_ids) {
+      await db.execute({
+        sql: 'INSERT INTO prompt_categories (prompt_id, category_id) VALUES (?, ?)',
+        args: [promptId, catId],
+      });
+    }
+  }
 
-  return NextResponse.json({ ...prompt, categories }, { status: 201 });
+  const prompt = await db.execute({
+    sql: 'SELECT * FROM prompts WHERE id = ?',
+    args: [promptId],
+  });
+  const categories = await db.execute({
+    sql: `SELECT c.* FROM categories c
+          JOIN prompt_categories pc ON c.id = pc.category_id
+          WHERE pc.prompt_id = ?`,
+    args: [promptId],
+  });
+
+  return NextResponse.json({ ...prompt.rows[0], categories: categories.rows }, { status: 201 });
 }

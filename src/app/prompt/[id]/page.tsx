@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import db from '@/lib/db';
+import { ensureDbInitialized } from '@/lib/init';
 import { notFound } from 'next/navigation';
 import CopyButton from '@/components/CopyButton';
 import DownloadButton from '@/components/DownloadButton';
@@ -22,32 +23,41 @@ interface PromptPageProps {
   params: { id: string };
 }
 
-export default function PromptPage({ params }: PromptPageProps) {
-  const prompt = db.prepare(`
-    SELECT p.*,
+export default async function PromptPage({ params }: PromptPageProps) {
+  await ensureDbInitialized();
+
+  const promptResult = await db.execute({
+    sql: `SELECT p.*,
       (SELECT AVG(CAST(score AS FLOAT)) FROM ratings WHERE prompt_id = p.id) as average_rating,
       (SELECT COUNT(*) FROM ratings WHERE prompt_id = p.id) as rating_count
     FROM prompts p
-    WHERE p.id = ?
-  `).get(params.id) as any;
+    WHERE p.id = ?`,
+    args: [params.id],
+  });
 
-  if (!prompt) {
+  if (promptResult.rows.length === 0) {
     notFound();
   }
 
-  const categories = db.prepare(`
-    SELECT c.* FROM categories c
-    JOIN prompt_categories pc ON c.id = pc.category_id
-    WHERE pc.prompt_id = ?
-  `).all(params.id) as any[];
+  const prompt = promptResult.rows[0] as any;
 
-  const comments = db.prepare(
-    'SELECT * FROM comments WHERE prompt_id = ? ORDER BY created_at DESC'
-  ).all(params.id) as Comment[];
+  const catResult = await db.execute({
+    sql: `SELECT c.* FROM categories c
+          JOIN prompt_categories pc ON c.id = pc.category_id
+          WHERE pc.prompt_id = ?`,
+    args: [params.id],
+  });
+  const categories = catResult.rows;
+
+  const commentsResult = await db.execute({
+    sql: 'SELECT * FROM comments WHERE prompt_id = ? ORDER BY created_at DESC',
+    args: [params.id],
+  });
+  const comments = commentsResult.rows as unknown as Comment[];
 
   const requiredDocs: string[] = (() => {
     try {
-      return JSON.parse(prompt.required_documents || '[]');
+      return JSON.parse((prompt.required_documents as string) || '[]');
     } catch {
       return [];
     }
@@ -69,8 +79,8 @@ export default function PromptPage({ params }: PromptPageProps) {
         {/* Header */}
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-start justify-between mb-3">
-            <h1 className="text-2xl font-bold text-gray-900">{prompt.name}</h1>
-            <span className="text-sm text-gray-400 whitespace-nowrap ml-4">v{prompt.version}</span>
+            <h1 className="text-2xl font-bold text-gray-900">{prompt.name as string}</h1>
+            <span className="text-sm text-gray-400 whitespace-nowrap ml-4">v{prompt.version as string}</span>
           </div>
           <div className="flex flex-wrap items-center gap-3 mb-3">
             {categories.map((cat: any) => (
@@ -84,18 +94,18 @@ export default function PromptPage({ params }: PromptPageProps) {
             ))}
             <span className="text-sm text-gray-400">{createdDate}</span>
           </div>
-          <p className="text-gray-600">{prompt.short_description}</p>
+          <p className="text-gray-600">{prompt.short_description as string}</p>
         </div>
 
         {/* Prompt tekst */}
         <div className="p-6 border-b border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900 mb-3">Prompt tekst</h2>
           <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm text-gray-800 whitespace-pre-wrap max-h-96 overflow-y-auto border border-gray-200">
-            {prompt.prompt_text}
+            {prompt.prompt_text as string}
           </div>
           <div className="flex gap-3 mt-4">
-            <CopyButton text={prompt.prompt_text} />
-            <DownloadButton text={prompt.prompt_text} filename={prompt.name.replace(/\s+/g, '-')} />
+            <CopyButton text={prompt.prompt_text as string} />
+            <DownloadButton text={prompt.prompt_text as string} filename={(prompt.name as string).replace(/\s+/g, '-')} />
           </div>
         </div>
 
@@ -115,22 +125,22 @@ export default function PromptPage({ params }: PromptPageProps) {
         {prompt.maker_notes && (
           <div className="p-6 border-b border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900 mb-3">Opmerkingen van de maker</h2>
-            <p className="text-gray-600 text-sm whitespace-pre-wrap">{prompt.maker_notes}</p>
+            <p className="text-gray-600 text-sm whitespace-pre-wrap">{prompt.maker_notes as string}</p>
           </div>
         )}
 
         {/* Rating */}
         <div className="p-6 border-b border-gray-100">
           <StarRating
-            promptId={prompt.id}
-            averageRating={prompt.average_rating}
-            ratingCount={prompt.rating_count}
+            promptId={prompt.id as number}
+            averageRating={prompt.average_rating as number | null}
+            ratingCount={prompt.rating_count as number}
           />
         </div>
 
         {/* Comments */}
         <div className="p-6">
-          <CommentSection promptId={prompt.id} initialComments={comments} />
+          <CommentSection promptId={prompt.id as number} initialComments={comments} />
         </div>
       </div>
     </div>
