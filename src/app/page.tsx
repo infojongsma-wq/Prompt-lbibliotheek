@@ -86,7 +86,7 @@ export default async function Home({ searchParams }: HomeProps) {
       <SearchBar />
       <div>
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Categorieën</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           {categories.rows.map((cat: any) => (
             <CategoryTile key={cat.id} {...cat} />
           ))}
