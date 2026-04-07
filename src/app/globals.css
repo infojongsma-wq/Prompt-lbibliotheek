@@ -2,8 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Roobert';
+  src: url('/fonts/Roobert-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Roobert';
+  src: url('/fonts/Roobert-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Roobert';
+  src: url('/fonts/Roobert-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 body {
-  @apply bg-gray-50 text-gray-900 antialiased;
+  @apply bg-oost-lichtblauw text-oost-donkerblauw antialiased;
 }
 
 .star-rating .star {
@@ -12,13 +36,9 @@ body {
 
 .star-rating .star:hover,
 .star-rating .star.active {
-  @apply text-yellow-400;
+  @apply text-oost-geel;
 }
 
 .star-rating .star.inactive {
   @apply text-gray-300;
-}
-
-.expand-collapse {
-  @apply transition-all duration-300 ease-in-out overflow-hidden;
 }

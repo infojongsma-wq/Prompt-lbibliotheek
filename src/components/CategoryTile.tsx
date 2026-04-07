@@ -1,12 +1,12 @@
 import Link from 'next/link';
 
 const categoryColors: Record<string, string> = {
-  tekst: 'bg-blue-500',
-  creatief: 'bg-purple-500',
-  analyse: 'bg-green-500',
-  onderzoek: 'bg-orange-500',
-  productiviteit: 'bg-rose-500',
-  anders: 'bg-gray-500',
+  tekst: 'bg-oost-blauw',
+  creatief: 'bg-oost-paars',
+  analyse: 'bg-oost-groen',
+  onderzoek: 'bg-oost-oranje',
+  productiviteit: 'bg-oost-rood',
+  anders: 'bg-oost-geel',
 };
 
 const categoryIcons: Record<string, string> = {
@@ -26,7 +26,7 @@ interface CategoryTileProps {
 }
 
 export default function CategoryTile({ name, slug, prompt_count }: CategoryTileProps) {
-  const color = categoryColors[slug] || 'bg-teal-500';
+  const color = categoryColors[slug] || 'bg-oost-blauw';
   const icon = categoryIcons[slug] || name.charAt(0).toUpperCase();
 
   return (

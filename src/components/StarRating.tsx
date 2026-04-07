@@ -16,13 +16,11 @@ export default function StarRating({ promptId, averageRating: initialAvg, rating
 
   const handleRate = async (score: number) => {
     if (submitted) return;
-
     const res = await fetch(`/api/prompts/${promptId}/ratings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ score }),
     });
-
     if (res.ok) {
       const data = await res.json();
       setAverage(data.average_rating);
@@ -36,14 +34,14 @@ export default function StarRating({ promptId, averageRating: initialAvg, rating
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-gray-700">Beoordeling:</span>
-        <span className="text-lg font-bold text-yellow-500">{displayRating > 0 ? displayRating : '-'}</span>
-        <span className="text-sm text-gray-500">({count} {count === 1 ? 'stem' : 'stemmen'})</span>
+        <span className="text-sm font-semibold text-oost-donkerblauw">Beoordeling:</span>
+        <span className="text-lg font-bold text-oost-geel">{displayRating > 0 ? displayRating : '-'}</span>
+        <span className="text-sm text-oost-donkerblauw/50">({count} {count === 1 ? 'stem' : 'stemmen'})</span>
       </div>
       <div className="flex items-center gap-1">
         {!submitted ? (
           <>
-            <span className="text-sm text-gray-500 mr-2">Geef je beoordeling:</span>
+            <span className="text-sm text-oost-donkerblauw/60 mr-2">Geef je beoordeling:</span>
             {[1, 2, 3, 4, 5].map((star) => (
               <button
                 key={star}
@@ -53,9 +51,7 @@ export default function StarRating({ promptId, averageRating: initialAvg, rating
                 className="focus:outline-none"
               >
                 <svg
-                  className={`w-7 h-7 transition-colors ${
-                    star <= hover ? 'text-yellow-400' : 'text-gray-300'
-                  }`}
+                  className={`w-7 h-7 transition-colors ${star <= hover ? 'text-oost-geel' : 'text-gray-300'}`}
                   fill="currentColor"
                   viewBox="0 0 20 20"
                 >
@@ -65,7 +61,7 @@ export default function StarRating({ promptId, averageRating: initialAvg, rating
             ))}
           </>
         ) : (
-          <span className="text-sm text-green-600 font-medium">Bedankt voor je beoordeling!</span>
+          <span className="text-sm text-oost-groen font-semibold">Bedankt voor je beoordeling!</span>
         )}
       </div>
     </div>

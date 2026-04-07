@@ -11,12 +11,12 @@ import { Comment } from '@/lib/types';
 export const dynamic = 'force-dynamic';
 
 const categoryBadgeColors: Record<string, string> = {
-  tekst: 'bg-blue-100 text-blue-700',
-  creatief: 'bg-purple-100 text-purple-700',
-  analyse: 'bg-green-100 text-green-700',
-  onderzoek: 'bg-orange-100 text-orange-700',
-  productiviteit: 'bg-rose-100 text-rose-700',
-  anders: 'bg-gray-100 text-gray-700',
+  tekst: 'bg-oost-blauw/10 text-oost-blauw',
+  creatief: 'bg-oost-paars/10 text-oost-paars',
+  analyse: 'bg-oost-groen/10 text-oost-groen',
+  onderzoek: 'bg-oost-oranje/10 text-oost-oranje',
+  productiviteit: 'bg-oost-rood/10 text-oost-rood',
+  anders: 'bg-oost-geel/10 text-oost-geel',
 };
 
 interface PromptPageProps {
@@ -30,21 +30,15 @@ export default async function PromptPage({ params }: PromptPageProps) {
     sql: `SELECT p.*,
       (SELECT AVG(CAST(score AS FLOAT)) FROM ratings WHERE prompt_id = p.id) as average_rating,
       (SELECT COUNT(*) FROM ratings WHERE prompt_id = p.id) as rating_count
-    FROM prompts p
-    WHERE p.id = ?`,
+    FROM prompts p WHERE p.id = ?`,
     args: [params.id],
   });
 
-  if (promptResult.rows.length === 0) {
-    notFound();
-  }
-
+  if (promptResult.rows.length === 0) notFound();
   const prompt = promptResult.rows[0] as any;
 
   const catResult = await db.execute({
-    sql: `SELECT c.* FROM categories c
-          JOIN prompt_categories pc ON c.id = pc.category_id
-          WHERE pc.prompt_id = ?`,
+    sql: `SELECT c.* FROM categories c JOIN prompt_categories pc ON c.id = pc.category_id WHERE pc.prompt_id = ?`,
     args: [params.id],
   });
   const categories = catResult.rows;
@@ -56,51 +50,46 @@ export default async function PromptPage({ params }: PromptPageProps) {
   const comments = commentsResult.rows as unknown as Comment[];
 
   const requiredDocs: string[] = (() => {
-    try {
-      return JSON.parse((prompt.required_documents as string) || '[]');
-    } catch {
-      return [];
-    }
+    try { return JSON.parse((prompt.required_documents as string) || '[]'); }
+    catch { return []; }
   })();
 
   const createdDate = new Date(prompt.created_at + 'Z').toLocaleDateString('nl-NL', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+    day: 'numeric', month: 'long', year: 'numeric',
   });
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      <Link href="/" className="inline-block text-indigo-600 hover:text-indigo-800 transition-colors">
+      <Link href="/" className="inline-block text-oost-blauw hover:text-oost-blauw/70 transition-colors font-semibold">
         &larr; Terug naar overzicht
       </Link>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-oost-blauw/10 shadow-sm overflow-hidden">
         {/* Header */}
-        <div className="p-6 border-b border-gray-100">
+        <div className="p-6 border-b border-oost-blauw/10">
           <div className="flex items-start justify-between mb-3">
-            <h1 className="text-2xl font-bold text-gray-900">{prompt.name as string}</h1>
-            <span className="text-sm text-gray-400 whitespace-nowrap ml-4">v{prompt.version as string}</span>
+            <h1 className="text-2xl font-bold text-oost-donkerblauw">{prompt.name as string}</h1>
+            <span className="text-sm text-oost-donkerblauw/40 whitespace-nowrap ml-4">v{prompt.version as string}</span>
           </div>
           <div className="flex flex-wrap items-center gap-3 mb-3">
             {categories.map((cat: any) => (
               <Link
                 key={cat.slug}
                 href={`/categorie/${cat.slug}`}
-                className={`text-xs px-3 py-1 rounded-full ${categoryBadgeColors[cat.slug] || 'bg-teal-100 text-teal-700'} hover:opacity-80 transition-opacity`}
+                className={`text-xs px-3 py-1 rounded-full font-semibold ${categoryBadgeColors[cat.slug] || 'bg-oost-blauw/10 text-oost-blauw'} hover:opacity-70 transition-opacity`}
               >
                 {cat.name}
               </Link>
             ))}
-            <span className="text-sm text-gray-400">{createdDate}</span>
+            <span className="text-sm text-oost-donkerblauw/40">{createdDate}</span>
           </div>
-          <p className="text-gray-600">{prompt.short_description as string}</p>
+          <p className="text-oost-donkerblauw/80">{prompt.short_description as string}</p>
         </div>
 
         {/* Prompt tekst */}
-        <div className="p-6 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">Prompt tekst</h2>
-          <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm text-gray-800 whitespace-pre-wrap max-h-96 overflow-y-auto border border-gray-200">
+        <div className="p-6 border-b border-oost-blauw/10">
+          <h2 className="text-lg font-bold text-oost-donkerblauw mb-3">Prompt tekst</h2>
+          <div className="bg-oost-lichtblauw rounded-lg p-4 font-mono text-sm text-oost-donkerblauw whitespace-pre-wrap max-h-96 overflow-y-auto border border-oost-blauw/10">
             {prompt.prompt_text as string}
           </div>
           <div className="flex gap-3 mt-4">
@@ -111,26 +100,24 @@ export default async function PromptPage({ params }: PromptPageProps) {
 
         {/* Zelf toe te voegen documenten */}
         {requiredDocs.length > 0 && (
-          <div className="p-6 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">Zelf toe te voegen documenten</h2>
-            <ul className="list-disc list-inside space-y-1 text-gray-600 text-sm">
-              {requiredDocs.map((doc, i) => (
-                <li key={i}>{doc}</li>
-              ))}
+          <div className="p-6 border-b border-oost-blauw/10">
+            <h2 className="text-lg font-bold text-oost-donkerblauw mb-3">Zelf toe te voegen documenten</h2>
+            <ul className="list-disc list-inside space-y-1 text-oost-donkerblauw/70 text-sm">
+              {requiredDocs.map((doc, i) => <li key={i}>{doc}</li>)}
             </ul>
           </div>
         )}
 
         {/* Opmerkingen maker */}
         {prompt.maker_notes && (
-          <div className="p-6 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">Opmerkingen van de maker</h2>
-            <p className="text-gray-600 text-sm whitespace-pre-wrap">{prompt.maker_notes as string}</p>
+          <div className="p-6 border-b border-oost-blauw/10">
+            <h2 className="text-lg font-bold text-oost-donkerblauw mb-3">Opmerkingen van de maker</h2>
+            <p className="text-oost-donkerblauw/70 text-sm whitespace-pre-wrap">{prompt.maker_notes as string}</p>
           </div>
         )}
 
         {/* Rating */}
-        <div className="p-6 border-b border-gray-100">
+        <div className="p-6 border-b border-oost-blauw/10">
           <StarRating
             promptId={prompt.id as number}
             averageRating={prompt.average_rating as number | null}

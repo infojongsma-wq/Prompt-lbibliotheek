@@ -7,7 +7,23 @@ const config: Config = {
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        oost: {
+          blauw: '#1361FF',
+          paars: '#8F00FF',
+          rood: '#FF4242',
+          oranje: '#FF6813',
+          geel: '#FFAF16',
+          groen: '#ABBF3D',
+          donkerblauw: '#131720',
+          lichtblauw: '#E7EEF9',
+        },
+      },
+      fontFamily: {
+        sans: ['Roobert', 'system-ui', 'sans-serif'],
+      },
+    },
   },
   plugins: [],
 };
