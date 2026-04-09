@@ -38,8 +38,8 @@ export default function CategoryTile({ name, slug, prompt_count }: CategoryTileP
             <Image
               src={icon}
               alt={name}
-              width={48}
-              height={48}
+              width={120}
+              height={120}
               className="opacity-70 object-contain"
             />
           ) : (
