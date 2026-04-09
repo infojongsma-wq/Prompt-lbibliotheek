@@ -72,7 +72,15 @@ export default async function Home({ searchParams }: HomeProps) {
     FROM categories c
     LEFT JOIN prompt_categories pc ON c.id = pc.category_id
     GROUP BY c.id
-    ORDER BY c.name
+    ORDER BY CASE c.slug
+      WHEN 'tekst' THEN 1
+      WHEN 'onderzoek' THEN 2
+      WHEN 'analyse' THEN 3
+      WHEN 'creatief' THEN 4
+      WHEN 'productiviteit' THEN 5
+      WHEN 'anders' THEN 6
+      ELSE 7
+    END
   `);
 
   return (
