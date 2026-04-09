@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 const categoryColors: Record<string, string> = {
   tekst: 'bg-oost-blauw',
@@ -10,12 +11,12 @@ const categoryColors: Record<string, string> = {
 };
 
 const categoryIcons: Record<string, string> = {
-  tekst: 'T',
-  creatief: 'C',
-  analyse: 'A',
-  onderzoek: 'O',
-  productiviteit: 'P',
-  anders: '?',
+  tekst: '/icons/icon-tekst.png',
+  creatief: '/icons/icon-creatief.png',
+  analyse: '',
+  onderzoek: '/icons/icon-onderzoek.png',
+  productiviteit: '/icons/icon-productiviteit.png',
+  anders: '/icons/icon-anders.png',
 };
 
 interface CategoryTileProps {
@@ -27,12 +28,24 @@ interface CategoryTileProps {
 
 export default function CategoryTile({ name, slug, prompt_count }: CategoryTileProps) {
   const color = categoryColors[slug] || 'bg-oost-blauw';
-  const icon = categoryIcons[slug] || name.charAt(0).toUpperCase();
+  const icon = categoryIcons[slug];
 
   return (
     <Link href={`/categorie/${slug}`}>
       <div className={`${color} rounded-xl p-6 text-white hover:scale-105 transition-transform duration-200 shadow-lg cursor-pointer min-h-[140px] flex flex-col justify-between`}>
-        <div className="text-4xl font-bold opacity-30">{icon}</div>
+        <div className="flex justify-end">
+          {icon ? (
+            <Image
+              src={icon}
+              alt={name}
+              width={48}
+              height={48}
+              className="opacity-70 object-contain"
+            />
+          ) : (
+            <span className="text-4xl font-bold opacity-30">{name.charAt(0).toUpperCase()}</span>
+          )}
+        </div>
         <div>
           <h3 className="text-xl font-semibold">{name}</h3>
           <p className="text-sm opacity-80 mt-1">
