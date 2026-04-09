@@ -13,7 +13,7 @@ const categoryColors: Record<string, string> = {
 const categoryIcons: Record<string, string> = {
   tekst: '/icons/icon-tekst.png',
   creatief: '/icons/icon-creatief.png',
-  analyse: '',
+  analyse: '/icons/icon-analyse.png',
   onderzoek: '/icons/icon-onderzoek.png',
   productiviteit: '/icons/icon-productiviteit.png',
   anders: '/icons/icon-anders.png',
