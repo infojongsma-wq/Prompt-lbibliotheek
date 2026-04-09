@@ -32,14 +32,14 @@ export default function CategoryTile({ name, slug, prompt_count }: CategoryTileP
 
   return (
     <Link href={`/categorie/${slug}`}>
-      <div className={`${color} rounded-xl p-6 text-white hover:scale-105 transition-transform duration-200 shadow-lg cursor-pointer min-h-[140px] flex flex-col justify-between`}>
+      <div className={`${color} rounded-xl p-4 text-white hover:scale-105 transition-transform duration-200 shadow-lg cursor-pointer min-h-[95px] flex flex-col justify-between`}>
         <div className="flex justify-end">
           {icon ? (
             <Image
               src={icon}
               alt={name}
-              width={120}
-              height={120}
+              width={80}
+              height={80}
               className="opacity-70 object-contain"
             />
           ) : (
@@ -47,7 +47,7 @@ export default function CategoryTile({ name, slug, prompt_count }: CategoryTileP
           )}
         </div>
         <div>
-          <h3 className="text-xl font-semibold">{name}</h3>
+          <h3 className="text-base font-semibold">{name}</h3>
           <p className="text-sm opacity-80 mt-1">
             {prompt_count} {prompt_count === 1 ? 'prompt' : 'prompts'}
           </p>
